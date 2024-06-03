@@ -1,0 +1,76 @@
+{
+  // Render vertical rulers after 88 characters. This aligns with Black.
+  "editor.rulers": [88],
+
+  // Render vertical rulers after 50 and 72 characters when showing the git commit
+  // message editor. 50 characters is the suggested max length for the title and 72
+  // characters is for the message body.
+  "[git-commit]": {
+    "editor.rulers": [50, 72]
+  },
+
+  // Start docstring on new line
+  "autoDocstring.startOnNewLine": true,
+
+  // Defines the default rule set for type checking. basic: All "off" rules + basic type
+  // checking rules. Using "strict" is, unfortunately, pretty much impossible unless you
+  // are not using a single third-party dependency.
+  "python.analysis.typeCheckingMode": "basic",
+  // Use Black for formatting.
+  "python.formatting.provider": "black",
+
+  // Enable linting of Python files.
+  "python.linting.enabled": true,
+
+  // Patterns used to exclude files or folders from being linted.
+  "python.linting.ignorePatterns": [".vscode/*.py", "**/site-packages/**/*.py"],
+
+  // Enable linting of Python files using bandit.
+  "python.linting.banditEnabled": true,
+  "python.linting.banditArgs": ["-c=.bandit"],
+
+  // Enable linting of Python files using flake8.
+  "python.linting.flake8Enabled": true,
+  "python.linting.flake8Path": "flake8",
+
+  // Enable linting of Python files using pydocstyle.
+  "python.linting.pydocstyleEnabled": true,
+
+  // Enable linting of Python files using pylint.
+  "python.linting.pylintEnabled": true,
+  "python.linting.pylintCategorySeverity.convention": "Warning",
+  "python.linting.pylintCategorySeverity.refactor": "Information",
+
+  // Formatters - remember to install extensions for these to work
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  // Enable pytest and configure it to create coverage reports that can be used with VS
+  // Code. Replace [PROJECT_FOLDER] with the name of your project's folder!
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": [
+    "--exitfirst",
+    "--verbose",
+    "--cov=./[PROJECT_FOLDER]",
+    "--cov-report=xml:test-results/[PROJECT_FOLDER]/cov-py38.xml",
+    "--cov-report=html:test-results/[PROJECT_FOLDER]/html"
+  ],
+  "coverage-gutters.coverageFileNames": [
+    "test-results/[PROJECT_FOLDER]/cov-py38.xml"
+  ],
+  "coverage-gutters.coverageReportFileName": "test-results/[PROJECT_FOLDER]/html/index.html",
+  "python.analysis.autoImportCompletions": true
+}
