@@ -4,3 +4,11 @@ class ApmClientException(Exception):
 
 class OktaClientException(Exception):
     pass
+
+
+class InvalidTokenException(ApmClientException):
+    pass
+
+
+class UnhandledAircraftTypeException(Exception):
+    pass
