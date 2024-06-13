@@ -95,10 +95,12 @@ class OktaClient:
     def refresh_token(self) -> dict[str, Union[str, int]]:
         """Refresh and return a new token."""
 
-        return self.session.refresh_token(
+        self.token = self.session.refresh_token(
             self.config["token_endpoint"],
             client_id=self.client_id,
         )
+
+        return self.token
 
     def introspect(self) -> dict:
         return requests.post(

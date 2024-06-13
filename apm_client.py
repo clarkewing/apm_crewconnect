@@ -89,8 +89,9 @@ class ApmClient:
         )
 
         if response.status_code == 403 and not self.authorized:
+            print("APM token expired. Refreshing.")
             self.refresh_token()
-            self.request(method, path, **kwargs)
+            return self.request(method, path, **kwargs)
 
         return response
 

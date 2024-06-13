@@ -1,6 +1,8 @@
 from datetime import date, timedelta
 from typing import Callable, Iterable, Optional, Union
 
+import jsonpickle
+
 from apm_client import ApmClient
 from models.flight import Flight
 from token_manager import TokenManager
@@ -46,7 +48,12 @@ class Apm:
                 "to": (end_date + timedelta(days=1)).isoformat(),  # 'to' is exclusive
                 "zoneOffset": "Z",
             },
-        ).json()
+        )
+
+        with open(".storage/request.json", "w+") as file:
+            file.write(jsonpickle.encode(flight_schedule))
+
+        flight_schedule = flight_schedule.json()
 
         flights = [
             Flight.from_dict(flight)
