@@ -42,9 +42,9 @@ class ApmClient:
         return self._config
 
     def fetch_token(self) -> dict[str, Union[str, int]]:
-        if self.config["authenticationMode"] != "okta":
+        if "okta" not in self.config["ssoConfiguration"]["baseUrl"]:
             raise ApmClientException(
-                f"Authentication mode not implemented: {self.config['authenticationMode']}"
+                f"Authentication mode not implemented: {self.config["ssoConfiguration"]["baseUrl"]}"
             )
 
         credentials = {
@@ -103,8 +103,8 @@ class ApmClient:
 
     def setup_okta_client(self, **kwargs) -> None:
         self.okta_client = OktaClient(
-            self.config["discoveryUri"],
-            self.config["clientId"],
+            self.config["ssoConfiguration"]["baseUrl"],
+            self.config["ssoConfiguration"]["clientId"],
             **kwargs,
         )
 

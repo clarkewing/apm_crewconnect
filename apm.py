@@ -1,11 +1,17 @@
 from datetime import date, timedelta
-from typing import Callable, Iterable, Optional, Union
+import json
+import re
+import statistics
+from typing import Callable, List, Optional
 
 import jsonpickle
 
 from apm_client import ApmClient
+from models.duty_period import DutyPeriod
 from models.flight import Flight
+from models.pairing import Pairing
 from token_manager import TokenManager
+from utils import dates_in_range
 
 
 class Apm:
@@ -52,6 +58,7 @@ class Apm:
 
         with open(".storage/request.json", "w+") as file:
             file.write(jsonpickle.encode(flight_schedule))
+            file.write(json.dumps(flight_schedule.json()))
 
         flight_schedule = flight_schedule.json()
 
@@ -67,6 +74,176 @@ class Apm:
         ]
 
         return flights
+
+    def get_pairing_options(
+        self,
+        reference_date: date,
+        sort_by: str | set[str] | Callable = "rest",
+        airports: List[str] = [],
+        stopovers: List[str] = [],
+        flight_numbers: List[str] = [],
+        total_on_days: Optional[int] = None,
+        consecutive_stopover_nights: Optional[int] = None,
+        excluded_dates: List[date] = [],
+        excluded_stopovers: List[str] = [],
+        minimum_on_days: int = 1,
+    ) -> list:
+        """
+        Get the pairing options for a specified reference date.
+
+        :param reference_date: The beginning of the date range.
+        :param sort_by: The attribute or callable which should be used to sort the results.
+        :param airports: A list of airports to filter the pairing options.
+        :param stopovers: A list of stopovers to filter the pairing options.
+        :param flight_numbers: A list of flight numbers to filter the pairing options.
+        :param total_on_days: The number of ON days to filter the pairing options by.
+        :param consecutive_stopover_nights: The number of consecutive stopovers nights
+                                            to filter the pairing options by.
+        :excluded_dates: A list of dates to be excluded from results.
+        :excluded_stopovers: A list of stopovers to be excluded from results.
+        :return: The filtered pairing options.
+        """
+
+        pairing_options = []
+        filters = {}
+
+        if len(airports) > 0:
+            filters["airports"] = " ".join(airports)
+
+        if len(stopovers) > 0:
+            filters["stopovers"] = " ".join(stopovers)
+
+        if len(flight_numbers) > 0:
+            filters["flightNumbers"] = " ".join(flight_numbers)
+
+        if total_on_days is not None:
+            filters["totalOverlappingDays"] = total_on_days
+
+        if consecutive_stopover_nights is not None:
+            filters["consecutiveNightStopover"] = consecutive_stopover_nights
+
+        response = self.client.request(
+            "get",
+            f"/api/crews/{self.user_id}/pairing-requests",
+            params={
+                "referenceDate": reference_date.isoformat(),
+                "isLocal": True,
+            }
+            | filters,
+        ).json()
+
+        if "_embedded" in response:
+            pairing_options += [
+                Pairing.from_dict(pairing_option)
+                for pairing_option in response["_embedded"]["pairingRequestDtoList"]
+            ]
+
+        print("Retrieved results page 1")
+
+        while "next" in response["_links"]:
+            response = self.client.request(
+                "get",
+                response["_links"]["next"]["href"],
+            ).json()
+
+            if "_embedded" in response:
+                pairing_options += [
+                    Pairing.from_dict(pairing_option)
+                    for pairing_option in response["_embedded"]["pairingRequestDtoList"]
+                ]
+
+            print(
+                "Retrieved results page "
+                + re.search("page=([0-9]*)", response["_links"]["self"]["href"]).group(
+                    1
+                )
+            )
+
+        # Exclude unwanted dates
+        pairing_options = list(
+            filter(
+                lambda pairing_option: not dates_in_range(
+                    excluded_dates,
+                    pairing_option.scheduled_departure_date,
+                    pairing_option.scheduled_arrival_date,
+                ),
+                pairing_options,
+            )
+        )
+
+        # Exclude unwanted stopovers
+        pairing_options = list(
+            filter(
+                lambda pairing_option: len(
+                    set(pairing_option.stopover_airports) - set(excluded_stopovers)
+                )
+                == len(pairing_option.stopover_airports),
+                pairing_options,
+            )
+        )
+
+        # Include only pairing matching minimum on days
+        pairing_options = list(
+            filter(
+                lambda pairing_option: pairing_option.total_on_days >= minimum_on_days,
+                pairing_options,
+            )
+        )
+
+        for pairing_option in pairing_options:
+            response = self.client.request(
+                "get",
+                f"/api/crews/{self.user_id}/pairing-requests/{pairing_option.id}/details",
+                params={"zoneOffset": "+0200"},
+            ).json()
+
+            pairing_option.duty_periods = [
+                DutyPeriod.from_dict(duty_period_dto)
+                for duty_period_dto in response["dutyPeriodRequestDtos"]
+            ]
+
+            print("Retrieved duty periods for pairing ID " + str(pairing_option.id))
+
+        # sorters = {
+        #     "rest": lambda pairing_option: statistics.mean(
+        #         [
+        #             rest_period["duration"].total_seconds()
+        #             for rest_period in pairing_option.rest_periods
+        #         ]
+        #     ),
+        #     "block": lambda pairing_option: statistics.mean(
+        #         [
+        #             duty_period.block.total_seconds()
+        #             for duty_period in pairing_option.duty_periods
+        #         ]
+        #     ),
+        #     "total_on_days": lambda pairing_option: pairing_option.total_on_days,
+        # }
+
+        match sort_by:
+            case "rest":
+                sort_by = lambda pairing_option: statistics.mean(
+                    [
+                        rest_period["duration"].total_seconds()
+                        for rest_period in pairing_option.rest_periods
+                    ]
+                )
+            case "block":
+                sort_by = lambda pairing_option: statistics.mean(
+                    [
+                        duty_period.block.total_seconds()
+                        for duty_period in pairing_option.duty_periods
+                    ]
+                )
+            case "total_on_days":
+                sort_by = "total_on_days"
+
+        pairing_options.sort(
+            key=sort_by,
+            reverse=True,
+        )
+
+        return pairing_options
 
     def _setup_client(self, host):
         if self.token_manager:

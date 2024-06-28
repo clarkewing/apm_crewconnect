@@ -59,7 +59,30 @@ class Flight:
 
         passenger_info = PassengerInfo(**data["passenger_info_dto"])
         freight_info = FreightInfo(**data["freight_info_dto"])
-        flight_times = FlightTimes(**data["flight_times"])
+        flight_times = FlightTimes(
+            departure_estimated=data["flight_times"]["departure_estimated"],
+            arrival_estimated=data["flight_times"]["arrival_estimated"],
+            block_out=(
+                datetime.fromisoformat(data["flight_times"]["out"])
+                if "out" in data["flight_times"]
+                else None
+            ),
+            block_off=(
+                datetime.fromisoformat(data["flight_times"]["off"])
+                if "off" in data["flight_times"]
+                else None
+            ),
+            block_on=(
+                datetime.fromisoformat(data["flight_times"]["on"])
+                if "on" in data["flight_times"]
+                else None
+            ),
+            block_in=(
+                datetime.fromisoformat(data["flight_times"]["in"])
+                if "in" in data["flight_times"]
+                else None
+            ),
+        )
         delays = [Delay(**delay) for delay in data["delays"]]
         crew_members = [CrewMember(**member) for member in data["crew_members"]]
 

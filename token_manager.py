@@ -1,5 +1,5 @@
 import json
-from typing import Optional, overload
+from typing import Optional
 
 
 class TokenManager:
@@ -32,5 +32,5 @@ class TokenManager:
         try:
             with open(self.path, "r") as file:
                 self._tokens = json.loads(file.read())
-        except FileNotFoundError:
+        except (FileNotFoundError, json.JSONDecodeError):
             self._tokens = {}
