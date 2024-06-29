@@ -140,7 +140,7 @@ class Apm:
 
         print("Retrieved results page 1")
 
-        while "next" in response["_links"]:
+        while "_links" in response and "next" in response["_links"]:
             response = self.client.request(
                 "get",
                 response["_links"]["next"]["href"],

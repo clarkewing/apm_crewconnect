@@ -51,7 +51,7 @@ flights = apm.get_flight_schedule(date(2024, 7, 4))
 flights_with_missing_crew_members = [
     flight
     for flight in flights
-    if flight.is_missing_crew_members("OPL") and flight.aircraft_type == "73H"
+    if flight.aircraft_type == "73H" and flight.is_missing_crew_members("OPL")
 ]
 
 print(f"Found {len(flights_with_missing_crew_members)} unstaffed flights.")
