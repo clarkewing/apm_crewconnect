@@ -1,13 +1,11 @@
 from datetime import UTC, date, datetime, timedelta
-import json
+from oauthlib.oauth2.rfc6749.errors import InvalidGrantError, MismatchingStateError
 import re
 import statistics
-import time
 from typing import Callable, List, Optional
 
-import jsonpickle
-
 from apm_client import ApmClient
+from exceptions import InvalidAuthRedirectException
 from models.duty_period import DutyPeriod
 from models.flight import Flight
 from models.pairing import Pairing
@@ -328,6 +326,8 @@ class Apm:
         return self.client.okta_client.generate_auth_url()
 
     def authenticate_from_redirect(self, redirect: str) -> None:
-        self.client.okta_client.fetch_token_from_redirect(redirect)
-
-        self.client.fetch_token()
+        try:
+            self.client.okta_client.fetch_token_from_redirect(redirect)
+            self.client.fetch_token()
+        except (InvalidGrantError, MismatchingStateError):
+            raise InvalidAuthRedirectException

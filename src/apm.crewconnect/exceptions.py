@@ -6,6 +6,10 @@ class OktaClientException(Exception):
     pass
 
 
+class InvalidAuthRedirectException(OktaClientException):
+    pass
+
+
 class InvalidTokenException(ApmClientException):
     pass
 
