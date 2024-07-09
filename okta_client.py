@@ -121,10 +121,6 @@ class OktaClient:
         environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
     def _init_session(self):
-        # kwargs = {
-        #     "client_id": self.client_id,
-        #     "auto_refresh_url":
-        # }
         if self.token:
             self.session = OAuth2Session(
                 self.client_id,

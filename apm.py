@@ -1,7 +1,8 @@
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 import json
 import re
 import statistics
+import time
 from typing import Callable, List, Optional
 
 import jsonpickle
@@ -15,19 +16,54 @@ from utils import dates_in_range
 
 
 class Apm:
+    roster = {}
+
     def __init__(
         self,
         host: str,
         token_manager: Optional[TokenManager] = None,
+        manual_auth: bool = False,
     ):
         self.host = host
         self.token_manager = token_manager
+        self.manual_auth = manual_auth
 
         self._setup_client(host)
 
     @property
     def user_id(self) -> str:
         return self.client.user_id
+
+    def update(
+        self,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> list:
+        if start_date is None:
+            start_date = date.today()
+
+        if end_date is None:
+            end_date = start_date + timedelta(days=30)
+
+        if isinstance(start_date, date):
+            start_date = datetime.combine(start_date, datetime.min.time(), UTC)
+
+        if isinstance(end_date, date):
+            end_date = datetime.combine(end_date, datetime.max.time(), UTC)
+
+        roster = self.client.request(
+            "get",
+            f"/api/crews/{self.user_id}/roster-calendars",
+            params={
+                "dateFrom": start_date.isoformat(),
+                "dateTo": (end_date + timedelta(days=1)).isoformat(),
+                "zoneOffset": "Z",
+            },
+        ).json()
+
+        self.roster = roster["utcCalendar"]
+
+        return self.roster
 
     def get_flight_schedule(
         self,
@@ -55,10 +91,6 @@ class Apm:
                 "zoneOffset": "Z",
             },
         )
-
-        with open(".storage/request.json", "w+") as file:
-            file.write(jsonpickle.encode(flight_schedule))
-            file.write(json.dumps(flight_schedule.json()))
 
         flight_schedule = flight_schedule.json()
 
@@ -254,7 +286,12 @@ class Apm:
                 key="okta", value=token
             )
 
-            if self.token_manager.has("apm") and self.token_manager.has("okta"):
+            if (
+                self.token_manager.has("apm")
+                and self.token_manager.has("okta")
+                and self.token_manager.get("apm")
+                and self.token_manager.get("okta")
+            ):
                 self.client = ApmClient(
                     host,
                     token=self.token_manager.get("apm"),
@@ -268,23 +305,29 @@ class Apm:
                 self.client = ApmClient(host, token_updater=apm_token_updater)
                 self.client.setup_okta_client(token_updater=okta_token_updater)
 
-                self._authenticate_client()
+                if not self.manual_auth:
+                    self._authenticate_client()
         else:
             self.client = ApmClient(host)
             self.client.setup_okta_client()
 
-            self._authenticate_client()
+            if not self.manual_auth:
+                self._authenticate_client()
 
     def _authenticate_client(self):
-        authorization_url = self.client.okta_client.generate_auth_url()
-
         print("Please go here and authorize:")
-        print(authorization_url)
+        print(self.generate_auth_url())
         print()
 
         redirect = input("Paste in the full redirect URL: ")
         print()
 
+        self.authenticate_from_redirect(redirect)
+
+    def generate_auth_url(self) -> str:
+        return self.client.okta_client.generate_auth_url()
+
+    def authenticate_from_redirect(self, redirect: str) -> None:
         self.client.okta_client.fetch_token_from_redirect(redirect)
 
         self.client.fetch_token()

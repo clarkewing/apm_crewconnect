@@ -22,8 +22,6 @@ class Flight:
     commercial_flight_number: str
     airline_designator: str
     flight_number: str
-    atc_designator: str
-    atc_flight_number: str
     departure_airport_commercial_code: str
     departure_airport_name: str
     arrival_airport_commercial_code: str
@@ -52,6 +50,8 @@ class Flight:
     pax_type: Optional[str] = None
     departure_terminal_code: Optional[str] = None
     arrival_terminal_code: Optional[str] = None
+    atc_designator: Optional[str] = None
+    atc_flight_number: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Flight":
@@ -95,8 +95,8 @@ class Flight:
             commercial_flight_number=data["commercial_flight_number"],
             airline_designator=data["airline_designator"],
             flight_number=data["flight_number"],
-            atc_designator=data["atc_designator"],
-            atc_flight_number=data["atc_flight_number"],
+            atc_designator=data.get("atc_designator", None),
+            atc_flight_number=data.get("atc_flight_number", None),
             departure_airport_commercial_code=data["departure_airport_commercial_code"],
             departure_airport_name=data["departure_airport_name"],
             departure_terminal_code=data.get("departure_terminal_code", None),
