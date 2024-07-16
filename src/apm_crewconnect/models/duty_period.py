@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 from typing import List, Optional
 import humps
 
-from models.duty_period_component import DutyPeriodComponent
+from .duty_period_component import DutyPeriodComponent
 
 
 @dataclass

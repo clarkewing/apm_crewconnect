@@ -4,13 +4,13 @@ import re
 import statistics
 from typing import Callable, List, Optional
 
-from apm_client import ApmClient
-from exceptions import InvalidAuthRedirectException
-from models.duty_period import DutyPeriod
-from models.flight import Flight
-from models.pairing import Pairing
-from token_manager import TokenManager
-from utils import dates_in_range
+from .apm_client import ApmClient
+from .exceptions import InvalidAuthRedirectException
+from .models.duty_period import DutyPeriod
+from .models.flight import Flight
+from .models.pairing import Pairing
+from .token_manager import TokenManager
+from .utils import dates_in_range
 
 
 class Apm:

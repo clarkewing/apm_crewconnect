@@ -1,10 +1,9 @@
-from operator import itemgetter
 from typing import Callable, Mapping, Optional, Union
 from urllib.parse import urljoin
 import requests
 
-from exceptions import ApmClientException, InvalidTokenException
-from okta_client import OktaClient
+from .exceptions import ApmClientException
+from .okta_client import OktaClient
 
 
 class ApmClient:

@@ -6,7 +6,7 @@ import operator
 from typing import List, Optional
 import humps
 
-from models.duty_period import DutyPeriod
+from .duty_period import DutyPeriod
 
 
 @dataclass

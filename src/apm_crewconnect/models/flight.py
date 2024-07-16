@@ -4,12 +4,12 @@ from typing import Any, Dict, List, Optional
 
 import humps
 
-from exceptions import UnhandledAircraftTypeException
-from models.crew_member import CrewMember
-from models.delay import Delay
-from models.flight_times import FlightTimes
-from models.freight_info import FreightInfo
-from models.passenger_info import PassengerInfo
+from ..exceptions import UnhandledAircraftTypeException
+from .crew_member import CrewMember
+from .delay import Delay
+from .flight_times import FlightTimes
+from .freight_info import FreightInfo
+from .passenger_info import PassengerInfo
 
 
 @dataclass

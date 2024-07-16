@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 import requests
 from requests_oauthlib import OAuth2Session
 
-from exceptions import OktaClientException
+from .exceptions import OktaClientException
 
 
 class OktaClient:
