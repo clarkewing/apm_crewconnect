@@ -1,3 +1,7 @@
+import sys
+
+sys.path.append("./src")
+
 import dataclasses
 from datetime import date, datetime, time, timedelta
 from email.policy import default
@@ -5,15 +9,15 @@ import json
 import statistics
 from typing import Any
 
+from apm_crewconnect import Apm
 import requests_cache
 
-from apm import Apm
-from token_manager import TokenManager
+from file_token_manager import FileTokenManager
 
 # requests_cache.install_cache("apm")
 
 
-apm = Apm("https://crewmobile.to.aero", TokenManager())
+apm = Apm("https://crewmobile.to.aero", FileTokenManager())
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -46,7 +50,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-flights = apm.get_flight_schedule(date(2024, 7, 9))
+flights = apm.get_flight_schedule(date(2024, 7, 22))
 
 flights_with_missing_crew_members = [
     flight

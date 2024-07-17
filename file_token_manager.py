@@ -2,7 +2,7 @@ import json
 from typing import Optional
 
 
-class TokenManager:
+class FileTokenManager:
     def __init__(self, path=".storage/tokens.json") -> None:
         self.path = path
         self._retrieve()

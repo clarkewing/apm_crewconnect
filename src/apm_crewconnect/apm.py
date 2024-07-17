@@ -9,7 +9,6 @@ from .exceptions import InvalidAuthRedirectException
 from .models.duty_period import DutyPeriod
 from .models.flight import Flight
 from .models.pairing import Pairing
-from .token_manager import TokenManager
 from .utils import dates_in_range
 
 
