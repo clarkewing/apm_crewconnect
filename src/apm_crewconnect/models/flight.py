@@ -32,8 +32,8 @@ class Flight:
     scheduled_arrival_time: datetime
     number_of_passengers: int
     number_of_infants: int
-    passenger_info_dto: PassengerInfo
-    freight_info_dto: FreightInfo
+    passenger_info: PassengerInfo
+    freight_info: FreightInfo
     flight_times: FlightTimes
     departure_color: str
     arrival_color: str
@@ -114,8 +114,8 @@ class Flight:
             pax_type=data.get("pax_type", None),
             number_of_passengers=data["number_of_passengers"],
             number_of_infants=data["number_of_infants"],
-            passenger_info_dto=passenger_info,
-            freight_info_dto=freight_info,
+            passenger_info=passenger_info,
+            freight_info=freight_info,
             flight_times=flight_times,
             departure_color=data["departure_color"],
             arrival_color=data["arrival_color"],
