@@ -1,8 +1,14 @@
+import sys
+
+sys.path.append("./src")
+
 import json
 from typing import Optional
 
+from apm_crewconnect.interfaces import TokenManagerInterface
 
-class FileTokenManager:
+
+class FileTokenManager(TokenManagerInterface):
     def __init__(self, path=".storage/tokens.json") -> None:
         self.path = path
         self._retrieve()

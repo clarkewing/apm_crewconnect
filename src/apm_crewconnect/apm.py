@@ -6,6 +6,8 @@ from typing import Callable, List, Optional
 
 from .apm_client import ApmClient
 from .exceptions import InvalidAuthRedirectException
+
+from .interfaces.token_manager_interface import TokenManagerInterface
 from .models.duty_period import DutyPeriod
 from .models.flight import Flight
 from .models.pairing import Pairing
@@ -18,7 +20,7 @@ class Apm:
     def __init__(
         self,
         host: str,
-        token_manager: Optional[TokenManager] = None,
+        token_manager: Optional[TokenManagerInterface] = None,
         manual_auth: bool = False,
     ):
         self.host = host
