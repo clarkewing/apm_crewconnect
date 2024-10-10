@@ -9,7 +9,7 @@ import json
 import statistics
 from typing import Any
 
-from apm_crewconnect import Apm
+from apm_crewconnect import Apm, utils
 import requests_cache
 
 from file_token_manager import FileTokenManager
@@ -50,27 +50,48 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-flights = apm.get_flight_schedule(date(2024, 7, 22))
+with open(".storage/roster.json", "w+") as file:
+    # roster = apm.get_roster(date.today(), date.today() + timedelta(days=30))
+    roster = apm.get_roster(date(2022, 8, 1), date.today() + timedelta(days=30))
 
-flights_with_missing_crew_members = [
-    flight
-    for flight in flights
-    if flight.aircraft_type == "73H" and flight.is_missing_crew_members("OPL")
-]
+    file.write(json.dumps(roster, cls=EnhancedJSONEncoder))
 
-flights_with_missing_crew_members.sort(
-    key=lambda flight: flight.departure_time.isoformat()
-)
+# with open(".storage/schedule.json", "w+") as file:
+#     flight_schedule = apm.get_flight_schedule(date.today())
 
-print(f"Found {len(flights_with_missing_crew_members)} unstaffed flights.")
+#     # flight_schedule = [
+#     #     flight for flight in flight_schedule if flight.aircraft_registration == "FHUYE"
+#     # ]
 
-with open(".storage/schedule.json", "w+") as file:
-    file.write(json.dumps(flights_with_missing_crew_members, cls=EnhancedJSONEncoder))
+#     file.write(json.dumps(flight_schedule, cls=EnhancedJSONEncoder))
+
+# with open(".storage/test.json", "w+") as file:
+#     output = apm.client.request("GET", "/api/airports/ORY")
+
+#     print(output)
+
+#     file.write(json.dumps(output.json(), cls=EnhancedJSONEncoder))
+
+# flights = apm.get_flight_schedule(date(2024, 7, 22))
+
+# flights_with_missing_crew_members = [
+#     flight
+#     for flight in flights
+#     if flight.aircraft_type == "73H" and flight.is_missing_crew_members("OPL")
+# ]
+
+# flights_with_missing_crew_members.sort(
+#     key=lambda flight: flight.departure_time.isoformat()
+# )
+
+# print(f"Found {len(flights_with_missing_crew_members)} unstaffed flights.")
+
+# with open(".storage/schedule.json", "w+") as file:
+#     file.write(json.dumps(flights_with_missing_crew_members, cls=EnhancedJSONEncoder))
 
 # pairing_options = apm.get_pairing_options(
-#     date(2024, 8, 1),
+#     date(2024, 11, 1),
 #     sort_by=lambda pairing_option: (
-#         pairing_option.total_on_days,
 #         statistics.mean(
 #             [
 #                 rest_period["duration"].total_seconds()
@@ -78,35 +99,16 @@ with open(".storage/schedule.json", "w+") as file:
 #             ]
 #             or [0]
 #         ),
+#         pairing_option.total_on_days,
 #     ),
-#     excluded_dates=[
-#         date(2024, 8, 1),
-#         date(2024, 8, 2),
-#         date(2024, 8, 3),
-#         date(2024, 8, 4),
-#         date(2024, 8, 5),
-#         date(2024, 8, 6),
-#         date(2024, 8, 7),
-#         date(2024, 8, 11),
-#         date(2024, 8, 12),
-#         date(2024, 8, 13),
-#         date(2024, 8, 14),
-#         date(2024, 8, 15),
-#         date(2024, 8, 16),
-#         date(2024, 8, 17),
-#         date(2024, 8, 18),
-#         date(2024, 8, 23),
-#         date(2024, 8, 24),
-#         date(2024, 8, 25),
-#         date(2024, 8, 26),
-#         date(2024, 8, 27),
-#         date(2024, 8, 28),
-#         date(2024, 8, 29),
-#         date(2024, 8, 30),
-#         date(2024, 8, 31),
-#     ],
-#     excluded_stopovers=["NTE", "LYS", "MRS", "MPL"],
-#     minimum_on_days=3,
+#     excluded_dates=(
+#         [date(2024, 11, 15), date(2024, 11, 16)]
+#         + utils.date_range(date(2024, 11, 25), date(2024, 11, 29))
+#     ),
+#     stopovers=["PGF"],
+#     # excluded_stopovers=["NTE", "LYS", "MRS"],
+#     minimum_on_days=2,
+#     without_bidders="OPL",
 # )
 
 # print(f"Found {len(pairing_options)} pairing options.")

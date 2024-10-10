@@ -1,8 +1,12 @@
 from datetime import UTC, date, datetime, timedelta
+import json
 from oauthlib.oauth2.rfc6749.errors import InvalidGrantError, MismatchingStateError
 import re
 import statistics
 from typing import Callable, List, Optional
+
+from .models.activity import Activity
+from .models.roster import Roster
 
 from .apm_client import ApmClient
 from .exceptions import InvalidAuthRedirectException
@@ -33,11 +37,11 @@ class Apm:
     def user_id(self) -> str:
         return self.client.user_id
 
-    def update(
+    def get_roster(
         self,
         start_date: date | None = None,
         end_date: date | None = None,
-    ) -> list:
+    ) -> Roster:
         if start_date is None:
             start_date = date.today()
 
@@ -50,7 +54,7 @@ class Apm:
         if isinstance(end_date, date):
             end_date = datetime.combine(end_date, datetime.max.time(), UTC)
 
-        roster = self.client.request(
+        response = self.client.request(
             "get",
             f"/api/crews/{self.user_id}/roster-calendars",
             params={
@@ -60,9 +64,23 @@ class Apm:
             },
         ).json()
 
-        self.roster = roster["utcCalendar"]
+        # return response
 
-        return self.roster
+        return Roster(
+            start=start_date,
+            end=end_date,
+            activities=list(
+                {
+                    activity.id: activity
+                    for calendar_day in response["utcCalendar"]
+                    for activity in map(
+                        Activity.from_roster,
+                        calendar_day["crewActivities"],
+                    )
+                    if activity is not None
+                }.values()
+            ),
+        )
 
     def get_flight_schedule(
         self,
@@ -118,6 +136,7 @@ class Apm:
         excluded_dates: List[date] = [],
         excluded_stopovers: List[str] = [],
         minimum_on_days: int = 1,
+        without_bidders: Optional[str] = None,
     ) -> list:
         """
         Get the pairing options for a specified reference date.
@@ -153,29 +172,24 @@ class Apm:
         if consecutive_stopover_nights is not None:
             filters["consecutiveNightStopover"] = consecutive_stopover_nights
 
-        response = self.client.request(
-            "get",
-            f"/api/crews/{self.user_id}/pairing-requests",
-            params={
-                "referenceDate": reference_date.isoformat(),
-                "isLocal": True,
-            }
-            | filters,
-        ).json()
+        page = 1
 
-        if "_embedded" in response:
-            pairing_options += [
-                Pairing.from_dict(pairing_option)
-                for pairing_option in response["_embedded"]["pairingRequestDtoList"]
-            ]
-
-        print("Retrieved results page 1")
-
-        while "_links" in response and "next" in response["_links"]:
+        while page == 1 or "_embedded" in response:
             response = self.client.request(
                 "get",
-                response["_links"]["next"]["href"],
-            ).json()
+                f"/api/crews/{self.user_id}/pairing-requests",
+                params={
+                    "referenceDate": reference_date.strftime("%Y-%m-%dT%H:%MZ"),
+                    "isLocal": True,
+                    "page": page,
+                }
+                | filters,
+            )
+
+            if "error" in response.json():
+                raise Exception(response.json()["error"])
+
+            response = response.json()
 
             if "_embedded" in response:
                 pairing_options += [
@@ -183,12 +197,28 @@ class Apm:
                     for pairing_option in response["_embedded"]["pairingRequestDtoList"]
                 ]
 
-            print(
-                "Retrieved results page "
-                + re.search("page=([0-9]*)", response["_links"]["self"]["href"]).group(
-                    1
-                )
-            )
+                print("Retrieved results page " + str(page))
+
+            page += 1
+
+        # while "_links" in response and "next" in response["_links"]:
+        #     response = self.client.request(
+        #         "get",
+        #         response["_links"]["next"]["href"],
+        #     ).json()
+
+        #     if "_embedded" in response:
+        #         pairing_options += [
+        #             Pairing.from_dict(pairing_option)
+        #             for pairing_option in response["_embedded"]["pairingRequestDtoList"]
+        #         ]
+
+        #     print(
+        #         "Retrieved results page "
+        #         + re.search("page=([0-9]*)", response["_links"]["self"]["href"]).group(
+        #             1
+        #         )
+        #     )
 
         # Exclude unwanted dates
         pairing_options = list(
@@ -231,6 +261,16 @@ class Apm:
             pairing_option.duty_periods = [
                 DutyPeriod.from_dict(duty_period_dto)
                 for duty_period_dto in response["dutyPeriodRequestDtos"]
+                if len(
+                    [
+                        pairing_request_crews["crewRequestCrewDtos"]
+                        for pairing_request_crews in response[
+                            "pairingRequestCrewByRoleDtos"
+                        ]
+                        if pairing_request_crews["roleCode"] == without_bidders
+                    ]
+                )
+                == 0
             ]
 
             print("Retrieved duty periods for pairing ID " + str(pairing_option.id))

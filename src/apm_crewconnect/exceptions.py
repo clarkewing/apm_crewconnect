@@ -16,3 +16,7 @@ class InvalidTokenException(ApmClientException):
 
 class UnhandledAircraftTypeException(Exception):
     pass
+
+
+class UnknownActivityTypeException(Exception):
+    pass

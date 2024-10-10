@@ -85,7 +85,7 @@ class Pairing:
 
     @property
     def total_block(self) -> Optional[list[dict]]:
-        if self.duty_periods is None:
+        if not self.duty_periods:
             return None
 
         return reduce(operator.add, (duty.block for duty in self.duty_periods))
