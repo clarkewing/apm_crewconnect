@@ -18,5 +18,5 @@ class UnhandledAircraftTypeException(Exception):
     pass
 
 
-class UnknownActivityTypeException(Exception):
+class UnhandledActivityTypeException(Exception):
     pass

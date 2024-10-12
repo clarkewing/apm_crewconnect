@@ -3,7 +3,7 @@ import sys
 sys.path.append("./src")
 
 import dataclasses
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from email.policy import default
 import json
 import statistics
@@ -38,21 +38,17 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return o.isoformat()
 
         if isinstance(o, timedelta):
-            total_seconds = o.total_seconds()
-            hours, remainder = divmod(total_seconds, 3600)
-            minutes, seconds = divmod(remainder, 60)
-            hours = int(hours)
-            minutes = int(minutes)
-            if minutes < 10:
-                minutes = "0{}".format(minutes)
-            return "{}:{}".format(hours, minutes)
+            return utils.timedelta_to_str(o)
+
+        if isinstance(o, timezone):
+            return utils.timezone_to_offset_str(o)
 
         return super().default(o)
 
 
 with open(".storage/roster.json", "w+") as file:
     # roster = apm.get_roster(date.today(), date.today() + timedelta(days=30))
-    roster = apm.get_roster(date(2022, 8, 1), date.today() + timedelta(days=30))
+    roster = apm.get_roster(date(2024, 10, 1), date(2024, 10, 31))
 
     file.write(json.dumps(roster, cls=EnhancedJSONEncoder))
 

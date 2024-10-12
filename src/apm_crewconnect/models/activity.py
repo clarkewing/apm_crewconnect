@@ -1,14 +1,14 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Union
 
-from ..exceptions import UnknownActivityTypeException
+from ..exceptions import UnhandledActivityTypeException, UnhandledAircraftTypeException
 from .crew_member import CrewMember
 
 
 @dataclass(kw_only=True)
 class Activity:
-    id: int
+    id: Optional[int]
     pairing_id: Optional[int]
     is_pending: bool
     details: str
@@ -22,7 +22,7 @@ class Activity:
     crew_members: list[CrewMember]
 
     @property
-    def title(self):
+    def title(self) -> str:
         return self.details
 
     @classmethod
@@ -31,7 +31,7 @@ class Activity:
     ) -> Union["Activity", None]:
         if force_base:
             return Activity(
-                id=data["opsLegCrewId"],
+                id=data.get("opsLegCrewId"),
                 pairing_id=data.get("crewPairingId"),
                 is_pending=data["pendingRequest"],
                 details=data["details"],
@@ -69,25 +69,39 @@ class Activity:
             if data["groundType"] == "S":
                 return SimulatorActivity.from_roster(data)
 
-            if data["groundType"] == "O":  # Off
-                return None
+            if data["groundType"] == "O":
+                if data["groundCode"] == "OFFHS":
+                    return AbsentActivity.from_roster(data)
 
-            if data["groundType"] == "N":  # BlancVol
-                return None
+                return OffActivity.from_roster(data)
 
-            if data["groundType"] == "V":  # Vacation
-                return None
+            if data["groundType"] == "N":
+                if data["groundCode"] == "UNFIT":
+                    return UnfitActivity.from_roster(data)
 
-            if data["groundType"] == "A":  # HS
-                return None
+                return BlankFlightActivity.from_roster(data)
 
-        raise UnknownActivityTypeException(data)
+            if data["groundType"] == "V":
+                return VacationActivity.from_roster(data)
+
+            if data["groundType"] == "A":
+                return AbsentActivity.from_roster(data)
+
+        raise UnhandledActivityTypeException(data)
 
 
 @dataclass(kw_only=True)
 class GroundActivity(Activity):
     ground_code: str
     description: str
+
+    @property
+    def title(self) -> str:
+        return self.ground_code
+
+    @property
+    def category(self) -> str:
+        return self.ground_code[:4].upper()
 
     @classmethod
     def from_roster(cls, data: dict[str, Any]) -> "GroundActivity":
@@ -101,14 +115,70 @@ class GroundActivity(Activity):
 
 
 @dataclass(kw_only=True)
-class SimulatorActivity(GroundActivity):
+class OffActivity(GroundActivity):
     @property
-    def title(self):
+    def is_requested(self) -> bool:
+        return self.ground_code == "OFFD"
+
+    @classmethod
+    def from_roster(cls, data: dict[str, Any]) -> "OffActivity":
+        return cls(**super().from_roster(data).__dict__)
+
+
+@dataclass(kw_only=True)
+class BlankFlightActivity(GroundActivity):
+    @classmethod
+    def from_roster(cls, data: dict[str, Any]) -> "BlankFlightActivity":
+        return cls(**super().from_roster(data).__dict__)
+
+
+@dataclass(kw_only=True)
+class VacationActivity(GroundActivity):
+    @property
+    def is_on_blank(self) -> bool:
+        return self.ground_code == "CPBLANC"
+
+    @classmethod
+    def from_roster(cls, data: dict[str, Any]) -> "VacationActivity":
+        return cls(**super().from_roster(data).__dict__)
+
+
+@dataclass(kw_only=True)
+class AbsentActivity(GroundActivity):
+    @property
+    def is_on_off(self) -> bool:
+        return self.ground_code == "CPBLANC"
+
+    @classmethod
+    def from_roster(cls, data: dict[str, Any]) -> "AbsentActivity":
+        return cls(**super().from_roster(data).__dict__)
+
+
+@dataclass(kw_only=True)
+class UnfitActivity(GroundActivity):
+    @classmethod
+    def from_roster(cls, data: dict[str, Any]) -> "UnfitActivity":
+        return cls(**super().from_roster(data).__dict__)
+
+
+@dataclass(kw_only=True)
+class SimulatorActivity(GroundActivity):
+    block_time: timedelta
+
+    @property
+    def title(self) -> str:
         return "Sim Session: " + self.ground_code
 
     @classmethod
     def from_roster(cls, data: dict[str, Any]) -> "SimulatorActivity":
-        return cls(**super().from_roster(data).__dict__)
+        super_activity = GroundActivity.from_roster(data)
+
+        return cls(
+            **super_activity.__dict__
+            | {
+                "block_time": super_activity.end - super_activity.start,
+            }
+        )
 
 
 @dataclass(kw_only=True)
@@ -119,7 +189,7 @@ class HotelActivity(Activity):
     hotel_phone: Optional[str] = None
 
     @property
-    def title(self):
+    def title(self) -> str:
         return "Hotel: " + self.hotel_name
 
     @classmethod
@@ -151,7 +221,7 @@ class DeadheadActivity(Activity):
     duration: timedelta
 
     @property
-    def title(self):
+    def title(self) -> str:
         return (
             "Deadhead: "
             + self.description
@@ -160,6 +230,10 @@ class DeadheadActivity(Activity):
             + "-"
             + self.destination_iata_code
         )
+
+    @property
+    def category(self) -> str:
+        return "DHD"
 
     @classmethod
     def from_roster(cls, data: dict[str, Any]) -> "DeadheadActivity":
@@ -189,7 +263,7 @@ class DeadheadActivity(Activity):
 @dataclass(kw_only=True)
 class ShuttleActivity(DeadheadActivity):
     @property
-    def title(self):
+    def title(self) -> str:
         return (
             "Shuttle: "
             + self.description
@@ -207,7 +281,7 @@ class ShuttleActivity(DeadheadActivity):
 @dataclass(kw_only=True)
 class TrainActivity(DeadheadActivity):
     @property
-    def title(self):
+    def title(self) -> str:
         return (
             "Train: "
             + self.description
@@ -231,20 +305,23 @@ class FlightActivity(Activity):
     origin_icao_code: str
     origin_name: str
     origin_country: str
+    origin_timezone: timezone
     origin_terminal: Optional[str] = None
     destination_iata_code: str
     destination_icao_code: str
     destination_name: str
     destination_country: str
+    destination_timezone: timezone
     destination_terminal: Optional[str] = None
     block_time: timedelta
     flight_duty: timedelta
     max_flight_duty: timedelta
     is_extended_flight_duty: bool
+    role: str
     catering_type: str
 
     @property
-    def title(self):
+    def title(self) -> str:
         return (
             self.flight_number
             + " "
@@ -252,6 +329,20 @@ class FlightActivity(Activity):
             + "-"
             + self.destination_iata_code
         )
+
+    @property
+    def category(self) -> str:
+        return "FLT"
+
+    @property
+    def aircraft_code(self) -> str:
+        if self.aircraft_type == "737-800":
+            return "73H"
+
+        if self.aircraft_type == "A320neo":
+            return "32N"
+
+        raise UnhandledAircraftTypeException
 
     @classmethod
     def from_roster(cls, data: dict[str, Any]) -> "FlightActivity":
@@ -265,11 +356,23 @@ class FlightActivity(Activity):
                 "origin_icao_code": data["departureAirportIcaoCode"],
                 "origin_name": data["departureAirportName"],
                 "origin_country": data["departureCountryName"],
+                "origin_timezone": timezone(
+                    timedelta(
+                        hours=int(data["departureAirportTimeZone"][:3]),
+                        minutes=int(data["departureAirportTimeZone"][-2:]),
+                    )
+                ),
                 "origin_terminal": data.get("departureTerminal"),
                 "destination_iata_code": data["arrivalAirportCode"],
                 "destination_icao_code": data["arrivalAirportIcaoCode"],
                 "destination_name": data["arrivalAirportName"],
                 "destination_country": data["arrivalCountryName"],
+                "destination_timezone": timezone(
+                    timedelta(
+                        hours=int(data["arrivalAirportTimeZone"][:3]),
+                        minutes=int(data["arrivalAirportTimeZone"][-2:]),
+                    )
+                ),
                 "destination_terminal": data.get("arrivalTerminal"),
                 "block_time": timedelta(
                     hours=int(data["flightBlockTime"][:2]),
@@ -286,6 +389,7 @@ class FlightActivity(Activity):
                     seconds=int(data["maxFlightDutyPeriod"][-2:]),
                 ),
                 "is_extended_flight_duty": data["flightDutyType"] != "Standard",
+                "role": data["flightRole"],
                 "catering_type": data["flightSerieType"],
             }
         )

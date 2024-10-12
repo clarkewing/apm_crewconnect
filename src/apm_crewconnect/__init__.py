@@ -3,15 +3,7 @@ from .apm_client import ApmClient
 from . import exceptions
 from .okta_client import OktaClient
 from . import utils
-from .models.activity import (
-    Activity,
-    GroundActivity,
-    ShuttleActivity,
-    TrainActivity,
-    SimulatorActivity,
-    HotelActivity,
-    FlightActivity,
-)
+from .models.activity import *
 from .models.crew_member import CrewMember
 from .models.delay import Delay
 from .models.duty_period_component import DutyPeriodComponent

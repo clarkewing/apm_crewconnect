@@ -53,6 +53,7 @@ class Apm:
 
         if isinstance(end_date, date):
             end_date = datetime.combine(end_date, datetime.max.time(), UTC)
+            end_date = end_date.replace(microsecond=0)
 
         response = self.client.request(
             "get",
@@ -64,11 +65,10 @@ class Apm:
             },
         ).json()
 
-        # return response
-
         return Roster(
-            start=start_date,
-            end=end_date,
+            user_id=self.user_id,
+            start=datetime.fromisoformat(response["utcCalendar"][0]["day"]).date(),
+            end=datetime.fromisoformat(response["utcCalendar"][-1]["day"]).date(),
             activities=list(
                 {
                     activity.id: activity
