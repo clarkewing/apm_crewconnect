@@ -48,7 +48,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 
 with open(".storage/roster.json", "w+") as file:
     # roster = apm.get_roster(date.today(), date.today() + timedelta(days=30))
-    roster = apm.get_roster(date(2024, 10, 1), date(2024, 10, 31))
+    roster = apm.get_roster(date(2024, 11, 1), date(2024, 12, 31))
 
     file.write(json.dumps(roster, cls=EnhancedJSONEncoder))
 

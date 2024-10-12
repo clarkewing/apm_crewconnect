@@ -8,17 +8,17 @@ from .crew_member import CrewMember
 
 @dataclass(kw_only=True)
 class Activity:
-    id: Optional[int]
+    id: int
     pairing_id: Optional[int]
     is_pending: bool
     details: str
     remarks: Optional[str] = None
     start: datetime
     end: datetime
-    check_in: datetime
-    check_out: datetime
-    pre_rest_start: datetime
-    post_rest_end: datetime
+    check_in: Optional[datetime]
+    check_out: Optional[datetime]
+    pre_rest_start: Optional[datetime]
+    post_rest_end: Optional[datetime]
     crew_members: list[CrewMember]
 
     @property
@@ -26,24 +26,39 @@ class Activity:
         return self.details
 
     @classmethod
-    def from_roster(
-        cls, data: dict[str, Any], force_base: bool = False
-    ) -> Union["Activity", None]:
+    def from_roster(cls, data: dict[str, Any], force_base: bool = False) -> "Activity":
         if force_base:
             return Activity(
-                id=data.get("opsLegCrewId"),
+                id=data.get("opsLegCrewId", cls.id_for_data(data)),
                 pairing_id=data.get("crewPairingId"),
                 is_pending=data["pendingRequest"],
                 details=data["details"],
                 remarks=data.get("remarks"),
                 start=datetime.fromisoformat(data["start"]),
                 end=datetime.fromisoformat(data["end"]),
-                check_in=datetime.fromisoformat(data["checkIn"]),
-                check_out=datetime.fromisoformat(data["checkOut"]),
-                pre_rest_start=datetime.fromisoformat(data["restBefore"]),
-                post_rest_end=datetime.fromisoformat(data["restAfter"]),
+                check_in=(
+                    datetime.fromisoformat(data.get("checkIn"))
+                    if data.get("checkIn")
+                    else None
+                ),
+                check_out=(
+                    datetime.fromisoformat(data.get("checkOut"))
+                    if data.get("checkOut")
+                    else None
+                ),
+                pre_rest_start=(
+                    datetime.fromisoformat(data.get("restBefore"))
+                    if data.get("restBefore")
+                    else None
+                ),
+                post_rest_end=(
+                    datetime.fromisoformat(data.get("restAfter"))
+                    if data.get("restAfter")
+                    else None
+                ),
                 crew_members=[
-                    CrewMember.from_roster(crew_data) for crew_data in data["crews"]
+                    CrewMember.from_roster(crew_data)
+                    for crew_data in data.get("crews", [])
                 ],
             )
 
@@ -89,11 +104,21 @@ class Activity:
 
         raise UnhandledActivityTypeException(data)
 
+    @staticmethod
+    def id_for_data(data) -> int:
+        s = (
+            str(datetime.fromisoformat(data["start"]).timestamp())
+            + str(datetime.fromisoformat(data["end"]).timestamp())
+            + data["details"]
+        )
+
+        return abs(hash(s)) % (10**8)
+
 
 @dataclass(kw_only=True)
 class GroundActivity(Activity):
     ground_code: str
-    description: str
+    description: Optional[str]
 
     @property
     def title(self) -> str:
@@ -109,7 +134,7 @@ class GroundActivity(Activity):
             **super().from_roster(data, force_base=True).__dict__
             | {
                 "ground_code": data["groundCode"],
-                "description": data["description"],
+                "description": data.get("description"),
             }
         )
 
