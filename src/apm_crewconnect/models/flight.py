@@ -84,7 +84,11 @@ class Flight:
             ),
         )
         delays = [Delay(**delay) for delay in data["delays"]]
-        crew_members = [CrewMember(**member) for member in data["crew_members"]]
+        crew_members = [
+            CrewMember(**member)
+            for member in data["crew_members"]
+            if "first_name" in member and "last_name" in member
+        ]
 
         return cls(
             leg_id=data["leg_id"],
