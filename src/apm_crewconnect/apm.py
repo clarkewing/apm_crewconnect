@@ -120,6 +120,7 @@ class Apm:
                 "companyAircraftDtoList"
             ]
             for flight in aircraft["sectors"]
+            if hasattr(flight, "first_name") and hasattr(flight, "last_name")
         ]
 
         return flights
