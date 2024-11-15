@@ -63,6 +63,9 @@ class Activity:
             )
 
         if data["activityType"] == "F":
+            if "flightNumber" not in data:
+                return Activity.from_roster(data, force_base=True)
+
             return FlightActivity.from_roster(data)
 
         if data["activityType"] == "S":
