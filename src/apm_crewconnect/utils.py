@@ -32,4 +32,4 @@ def timezone_to_offset_str(tz: timezone) -> str:
     hours, remainder = divmod(total_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
 
-    return sign + "{:02}{:02}".format(int(hours), int(minutes))
+    return sign + "{:02}{:02}".format(int(abs(hours)), int(abs(minutes)))
