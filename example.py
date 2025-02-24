@@ -46,11 +46,11 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-with open(".storage/roster.json", "w+") as file:
-    # roster = apm.get_roster(date.today(), date.today() + timedelta(days=30))
-    roster = apm.get_roster(date(2024, 11, 1), date(2024, 12, 31))
+# with open(".storage/roster.json", "w+") as file:
+#     # roster = apm.get_roster(date.today(), date.today() + timedelta(days=30))
+#     roster = apm.get_roster(date(2024, 11, 1), date(2024, 12, 31))
 
-    file.write(json.dumps(roster, cls=EnhancedJSONEncoder))
+#     file.write(json.dumps(roster, cls=EnhancedJSONEncoder))
 
 # with open(".storage/schedule.json", "w+") as file:
 #     flight_schedule = apm.get_flight_schedule(date.today())
@@ -68,7 +68,7 @@ with open(".storage/roster.json", "w+") as file:
 
 #     file.write(json.dumps(output.json(), cls=EnhancedJSONEncoder))
 
-# flights = apm.get_flight_schedule(date(2024, 7, 22))
+# flights = apm.get_flight_schedule(date(2024, 11, 10))
 
 # flights_with_missing_crew_members = [
 #     flight
@@ -85,29 +85,30 @@ with open(".storage/roster.json", "w+") as file:
 # with open(".storage/schedule.json", "w+") as file:
 #     file.write(json.dumps(flights_with_missing_crew_members, cls=EnhancedJSONEncoder))
 
-# pairing_options = apm.get_pairing_options(
-#     date(2024, 11, 1),
-#     sort_by=lambda pairing_option: (
-#         statistics.mean(
-#             [
-#                 rest_period["duration"].total_seconds()
-#                 for rest_period in pairing_option.rest_periods
-#             ]
-#             or [0]
-#         ),
-#         pairing_option.total_on_days,
-#     ),
-#     excluded_dates=(
-#         [date(2024, 11, 15), date(2024, 11, 16)]
-#         + utils.date_range(date(2024, 11, 25), date(2024, 11, 29))
-#     ),
-#     stopovers=["PGF"],
-#     # excluded_stopovers=["NTE", "LYS", "MRS"],
-#     minimum_on_days=2,
-#     without_bidders="OPL",
-# )
+pairing_options = apm.get_pairing_options(
+    date(2025, 4, 1),
+    sort_by=lambda pairing_option: (
+        statistics.mean(
+            [
+                rest_period["duration"].total_seconds()
+                for rest_period in pairing_option.rest_periods
+            ]
+            or [0]
+        ),
+        pairing_option.total_on_days,
+    ),
+    excluded_dates=(
+        utils.date_range(date(2025, 4, 5), date(2025, 4, 20))
+        + utils.date_range(date(2025, 4, 26), date(2025, 4, 27))
+    ),
+    # stopovers=["RAK"],
+    # excluded_stopovers=["LYS", "NTE", "MRS", "DWC", "BVC", "SID"],
+    minimum_on_days=3,
+    earliest_check_in=time(8, 0, 0),
+    without_bidders="OPL",
+)
 
-# print(f"Found {len(pairing_options)} pairing options.")
+print(f"Found {len(pairing_options)} pairing options.")
 
-# with open(".storage/pairing-options.json", "w+") as file:
-#     file.write(json.dumps(pairing_options, cls=EnhancedJSONEncoder))
+with open(".storage/pairing-options.json", "w+") as file:
+    file.write(json.dumps(pairing_options, cls=EnhancedJSONEncoder))
