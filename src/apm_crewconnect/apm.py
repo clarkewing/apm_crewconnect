@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, time
 import json
 from oauthlib.oauth2.rfc6749.errors import InvalidGrantError, MismatchingStateError
 import re
@@ -136,6 +136,7 @@ class Apm:
         excluded_dates: List[date] = [],
         excluded_stopovers: List[str] = [],
         minimum_on_days: int = 1,
+        earliest_check_in: Optional[time] = None,
         without_bidders: Optional[str] = None,
     ) -> list:
         """
@@ -274,6 +275,18 @@ class Apm:
             ]
 
             print("Retrieved duty periods for pairing ID " + str(pairing_option.id))
+
+        # Exclude pairings where any check-in is earlier than earliest_check_in
+        if earliest_check_in is not None:
+            pairing_options = [
+                pairing_option
+                for pairing_option in pairing_options
+                if pairing_option.duty_periods  # Ensure duty_periods exist
+                and all(
+                    duty.check_in_local.time() >= earliest_check_in
+                    for duty in pairing_option.duty_periods
+                )
+            ]
 
         # sorters = {
         #     "rest": lambda pairing_option: statistics.mean(

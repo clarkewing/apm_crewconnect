@@ -90,8 +90,19 @@ class Pairing:
 
         return reduce(operator.add, (duty.block for duty in self.duty_periods))
 
+    @property
+    def report_times(self) -> Optional[list[dict]]:
+        if self.duty_periods is None:
+            return None
+
+        return [
+            {"check_in": duty.check_in_local, "check_out": duty.check_out_local}
+            for duty in self.duty_periods
+        ]
+
     def to_dict(self):
         return dataclasses.asdict(self) | {
             "rest_periods": self.rest_periods,
+            "report_times": self.report_times,
             "total_block": self.total_block,
         }
